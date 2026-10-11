@@ -2,8 +2,8 @@ name: Daily Auto Commit
 
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch: 
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
 
 jobs:
   commit:
@@ -15,14 +15,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Update timestamp file
-        run: |
-          date -u > last_updated.txt
-
-      - name: Commit and push changes
+      - name: Randomize commits and push
         run: |
           git config --global user.name "malfurra"
           git config --global user.email "mallownly@gmail.com"
-          git add last_updated.txt
-          git commit -m "chore: automated daily update $(date +'%Y-%m-%d')" || exit 0
+
+          # Tentukan jumlah commit acak antara 1 sampai 5
+          COUNT=$(( (RANDOM % 5) + 1 ))
+          TODAY=$(date +'%Y-%m-%d')
+
+          for ((i=1; i<=COUNT; i++)); do
+            # Acak jam (00-23) dan menit (00-59)
+            RAND_HOUR=$(printf "%02d" $((RANDOM % 24)))
+            RAND_MIN=$(printf "%02d" $((RANDOM % 60)))
+            RAND_SEC=$(printf "%02d" $((RANDOM % 60)))
+            FAKE_DATE="${TODAY}T${RAND_HOUR}:${RAND_MIN}:${RAND_SEC}"
+
+            # Update file
+            echo "Update on ${FAKE_DATE} (commit $i of $COUNT)" >> last_updated.txt
+            git add last_updated.txt
+
+            # Set git author & committer date agar jam commit tercatat acak
+            GIT_AUTHOR_DATE="$FAKE_DATE" GIT_COMMITTER_DATE="$FAKE_DATE" \
+            git commit -m "chore: automated update ${TODAY} #$i" || exit 0
+          done
+
           git push
